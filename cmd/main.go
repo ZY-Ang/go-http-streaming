@@ -21,7 +21,7 @@ func testEndpoint(w http.ResponseWriter, r *http.Request) {
 	for i := 0; i < 1000000; i++ {
 		_, err := w.Write([]byte(fmt.Sprintf("%d\n", i+1)))
 		if err != nil {
-			fmt.Printf("failed to write string at %d: %v\n", i, err)
+			fmt.Printf("failed to write at %d: %v\n", i, err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -32,11 +32,25 @@ func testEndpoint(w http.ResponseWriter, r *http.Request) {
 }
 
 // sqlEndpoint is an example of how to keep writing
-func sqlEndpoint(db *sql.DB) func(w http.ResponseWriter, r *http.Request) {
+func sqlEndpoint(ctx context.Context, db *sql.DB) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		fmt.Printf("got / request\n")
 		w.Header().Set("Content-Type", "text/plain")
 		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s.txt\"", "test"))
+
+		var pingResult string
+		err := db.PingContext(ctx)
+		if err != nil {
+			pingResult = err.Error()
+		} else {
+			pingResult = "db ping success"
+		}
+		_, err = w.Write([]byte(fmt.Sprintf("%s\n", pingResult)))
+		if err != nil {
+			fmt.Printf("failed to write: %v\n", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 
 		w.WriteHeader(http.StatusOK)
 		fmt.Println("done / request")
@@ -61,7 +75,7 @@ func main() {
 	}
 	http.HandleFunc("/test", testEndpoint)
 	if serveDbEndpoint {
-		http.HandleFunc("/", sqlEndpoint(db))
+		http.HandleFunc("/", sqlEndpoint(ctx, db))
 	}
 
 	serveErrChan := make(chan error, 1)
