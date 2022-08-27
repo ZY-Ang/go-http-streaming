@@ -4,12 +4,14 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+
+	_ "github.com/go-sql-driver/mysql"
 )
 
 func setupDb(ctx context.Context) (*sql.DB, error) {
 	db, err := sql.Open(
 		"mysql",
-		"mysql://mysql:pw123@localhost:3306/httpstreampoc?sslmode=disable",
+		"mysql:pw123@tcp(localhost:3306)/httpstreampoc",
 	)
 	if err != nil {
 		fmt.Println("error opening db")
